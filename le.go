@@ -56,49 +56,20 @@ func (logger *Logger) Close() error {
 	return nil
 }
 
+var ReConnetTime time.Time
+
 // Opens a TCP connection to logentries.com
 func (logger *Logger) openConnection() error {
 	conn, err := tls.Dial("tcp", "data.logentries.com:443", &tls.Config{})
 	if err != nil {
 		return err
 	}
+	ReConnetTime = time.Now().Add(10 * time.Minute)
+	conn.SetWriteDeadline(ReConnetTime.Add(time.Minute))
+	if logger.conn != nil {
+		logger.conn.Close()
+	}
 	logger.conn = conn
-	return nil
-}
-
-// It returns if the TCP connection to logentries.com is open
-func (logger *Logger) isOpenConnection() bool {
-	if logger.conn == nil {
-		return false
-	}
-
-	buf := make([]byte, 1)
-
-	logger.conn.SetReadDeadline(time.Now())
-
-	_, err := logger.conn.Read(buf)
-
-	switch err.(type) {
-	case net.Error:
-		if err.(net.Error).Timeout() == true {
-			logger.conn.SetReadDeadline(time.Time{})
-
-			return true
-		}
-	}
-
-	return false
-}
-
-// It ensures that the TCP connection to logentries.com is open.
-// If the connection is closed, a new one is opened.
-func (logger *Logger) ensureOpenConnection() error {
-	if !logger.isOpenConnection() {
-		if err := logger.openConnection(); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
@@ -126,10 +97,9 @@ func (logger *Logger) Flags() int {
 }
 
 // Output does the actual writing to the TCP connection
-func (logger *Logger) Output(calldepth int, s string) error {
-	_, err := logger.Write([]byte(s))
-
-	return err
+func (logger *Logger) Output(calldepth int, s string) (err error) {
+	_, err = logger.Write([]byte(s))
+	return
 }
 
 // Panic is same as Print() but calls to panic
@@ -187,15 +157,12 @@ func (logger *Logger) SetPrefix(prefix string) {
 // it adds the access token and prefix and also replaces
 // line breaks with the unicode \u2028 character
 func (logger *Logger) Write(p []byte) (n int, err error) {
-	if err := logger.ensureOpenConnection(); err != nil {
-		return 0, err
-	}
-
 	logger.mu.Lock()
 	defer logger.mu.Unlock()
-
 	logger.makeBuf(p)
-
+	if time.Now().After(ReConnetTime) {
+		logger.openConnection()
+	}
 	return logger.conn.Write(logger.buf)
 }
 

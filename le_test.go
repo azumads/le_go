@@ -7,23 +7,6 @@ import (
 	"testing"
 )
 
-func TestConnectOpensConnection(t *testing.T) {
-	le, err := Connect("")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	defer le.Close()
-
-	if le.conn == nil {
-		t.Fail()
-	}
-
-	if le.isOpenConnection() == false {
-		t.Fail()
-	}
-}
-
 func TestConnectSetsToken(t *testing.T) {
 	le, err := Connect("myToken")
 	if err != nil {
@@ -33,34 +16,6 @@ func TestConnectSetsToken(t *testing.T) {
 	defer le.Close()
 
 	if le.token != "myToken" {
-		t.Fail()
-	}
-}
-
-func TestCloseClosesConnection(t *testing.T) {
-	le, err := Connect("")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	le.Close()
-
-	if le.isOpenConnection() == true {
-		t.Fail()
-	}
-}
-
-func TestOpenConnectionOpensConnection(t *testing.T) {
-	le, err := Connect("")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	defer le.Close()
-
-	le.openConnection()
-
-	if le.isOpenConnection() == false {
 		t.Fail()
 	}
 }
@@ -77,21 +32,6 @@ func TestEnsureOpenConnectionDoesNothingOnOpenConnection(t *testing.T) {
 	le.openConnection()
 
 	if old != &le.conn {
-		t.Fail()
-	}
-}
-
-func TestEnsureOpenConnectionCreatesNewConnection(t *testing.T) {
-	le, err := Connect("")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	defer le.Close()
-
-	le.openConnection()
-
-	if le.isOpenConnection() == false {
 		t.Fail()
 	}
 }
